@@ -1,0 +1,14 @@
+{
+  "name": "summits-polygon-contracts",
+  "version": "0.1.0",
+  "description": "contracts for summits ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Felix Niemeyer",
+  "license": "ISC",
+  "devDependencies": {
+    "hardhat": "^2.9.3"
+  }
+}
