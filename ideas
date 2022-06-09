@@ -1,0 +1,38 @@
+#deployment
+- generate 0x0000....* vanity address
+  - vanityeth -i 00000 --contract
+- deploy 
+
+#2022-06-08
+
+- Frontend / GraphQL: Date (created + last change + show history vielleicht?)
+
+- EIP-1167
+  - Base Contract ( = summits selbst? ) 
+  - Factory 
+  - Clonse (Proxy/Instances) 
+
+- Am Anfang immer Bonding curve
+  - Ein Teil davon geht an uns? oder nicht... (lieber nicht, ist einfacher. Und ich versuche nicht, etwas für mich zu sichern. Ich habe einfach Spaß am Leben. Jeder, der versucht, sich selbst mehr zu sichern, stirbt daran) 
+  - Optout => zu einem anderen ERC20 Token
+    - Freeze die Bonding curve
+    - Frontend kann dann Link zu UniSwap anzeigen oder so
+    
+- Aim = Base Contract
+  - create
+  - set content
+
+- speichere nur diffs
+  - und zwar an eine bestimmte Stelle: [4] 
+    - wenn sie schon existiert, wird der change abgewiesen, um Kollisionen zu vermeiden
+  - und dann noch lzma drüber laufen lassen 
+    - falls es komprimiert kleiner ist, mit dem ersten byte anzeigen, dass es komprimiert ist
+
+- will ich IPFS-Kram supporten? 
+  - ich denke schon...
+  - aber das ist wieder ne nummer größer... 
+  - Ach, ich brauche erstmal keine Images
+  - Und notizen packe ich wirklich auf die chain. 
+  - Ich glaube ich spare mir den IPFS-Kram
+  - Aber ein Subgraph schreibe ich, um gescheit requesten zu können. 
+
