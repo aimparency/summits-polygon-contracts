@@ -1,91 +1,76 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.1; 
 
 import "hardhat/console.sol";
-import "./Aim.sol"; 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/Ownable.sol"
 
-contract Summits {
-  address public baseAim; 
+// enum Rights {
+// 	ALL, 
+// 	MANAGE, 
+// 	MODIFY
+// }
 
-  event AimCreated(address newAimAddress); 
+/* Do not allow your master contract to be self-destructed as it will cause all clones to stop working, thus freezing their state and balances. */
 
-  function Summits(address _baseAddress) public {
-    baseAim = _baseAddress;
-      "aimparency", 
-      "An efficient socioeconomic system", 
-      100 * 31557600, // 100 years
-      0x555555,
-      3 * 1337, 
-    )
+struct Flow {
+	bool exists;
+	string explanation;
+	// uint8[][] explanationChanges; // save delta
+	uint16 weight;
+	bytes4 dx; // float32
+	bytes4 dy; 
+}
+
+contract IAim {
+  function aimType() returns string {
+    return 'base'
+  }
+  
+}
+
+contract Aim is IAim, Ownable, ERC20 {
+	string title; 
+	string readme;
+	bytes3 color;
+	uint64 effort; // in seconds
+
+	uint16 loopWeight; 
+
+	bool initialized; 
+
+	mapping (address => Flow) flowsFrom;
+
+  uint constant _initial_supply = (7 ** 12) * (10**18);
+  uint256 constant _max_shares = 2 ** 128 - 1;
+
+	mapping (uint128 => Aim) public aims; 
+	mapping (uint128 => mapping(uint128 => Flow)) public flows; // from into
+	mapping (address => uint128) public homes; 
+
+  constructor(address felix, uint256 amount) ERC20("Summits", "MM") {
+      _mint(felix, amount);
+      console.log("minted initial supply");
+      // hier im Konstruktor kann ich mir selbst tokens zuschreiben ohne sie zu bezahlen. Perks of creating systems. Denn der Konstruktor wird nur 
   }
 
-  function createAim(
+  function init(
+    address owner, 
     string _title, 
     string _initialDescription, 
     uint64 _effort, 
     bytes3 _color, 
     uint256 _initialShares, 
-  ) public {
-    address aim = createAimMimicker(); 
-    Aim(aim).init(
-      msg.sender,
-      _title,
-      _initialDescription, 
-      _effort, 
-      _color, 
-      _initialShares
-    );
-    aimIsWhitelisted[aim] = true; 
-    emit AimCreated(aim);
-    return aim;
-  }
-
-  function createAimMimicker() returns address {
-    bytes20 targetBytes = bytes20(baseAim);
-    // TODO: Optimization: create this code on baseAim change
-    assembly {
-      let code:= mload(0x40)
-      mstore(code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-      mstore(add(code, 0x14), targetBytes)
-      mstore(add(code, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-      mimicker := create(0, code, 0x37)
-    }
-    return address(mimicker);
-  }
-
-  function isLegitAimMimicker(address subject) returns bool {
-    bytes20 targetBytes = bytes20(baseAim);
-    assembly {
-      let code:= mload(0x40)
-      mstore(clone, 0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000)
-      mstore(add(clone, 0xa), targetBytes)
-      mstore(add(clone, 0x1e), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-
-      let subjectCode:= add(clone, 0x40)
-      extcodecopy(subject, subjectCode, 0, 0x2d)
-      result := and(
-        eq(mload(code), mload(subjectCode)),
-        eq(mload(add(code, 0xd)), mload(add(subjectCode, 0xd)))
-      )
-    }
-  }
-}
-
-// maintain list of aims? it's implicitly there in the history of createAim calls
-// flows are stored at receiving aims
-// "home aims" are stored in the client. 
-	mapping (address => uint128) public homes; 
-
-  constructor() ERC20("Summits", "MM") {
-      _mint(msg.sender, _initial_supply);
-      console.log("minted initial supply");
+  ) {
+    require(!initialized, "aim already initialized") 
   }
 
 	function createAim(
 		uint128 aimId, 
 		string calldata title, 
 		bytes3 color, 
-		Effort calldata effort, 
+		uint64 calldata effort, 
 		string calldata detailsCid, 
 		uint128 initialShares
 	) public {

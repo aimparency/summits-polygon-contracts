@@ -2,8 +2,19 @@
 - generate 0x0000....* vanity address
   - vanityeth -i 00000 --contract
 - deploy 
+  - so wählen, als hätte ich 1337 ETH ausgegeben. 
 
 #2022-06-08
+
+- subgraph implementieren 
+
+- efforts als Zahl einfach (Im frontend wird dann geparsed. 5 years 2 months) 
+
+- status + completion
+
+- switch to 0.8.14
+
+- Bonding curve
 
 - Frontend / GraphQL: Date (created + last change + show history vielleicht?)
 
