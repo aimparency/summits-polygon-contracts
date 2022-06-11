@@ -4,7 +4,7 @@ pragma solidity ^0.8.1;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/Ownable.sol"
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 // enum Rights {
 // 	ALL, 
@@ -23,222 +23,173 @@ struct Flow {
 	bytes4 dy; 
 }
 
-contract IAim {
-  function aimType() returns string {
-    return 'base'
-  }
-  
-}
+uint8 constant EDITOR = 1; 
+uint8 constant NETWORKER = 2; 
+uint8 constant MANAGER = 4; 
 
-contract Aim is IAim, Ownable, ERC20 {
+uint128 constant MAX_TOKENS = uint128(0) - 1;
+
+contract Aim is Ownable, ERC20 {
+  // make Ownable attributes accessible
+  address private _owner;
+
+  // make ERC20 attributes accessible
+  mapping(address => uint256) private _balances;
+  uint256 private _totalSupply;
+	string private _name; 
+	string private _symbol; 
+
+  // Aim attributes
+
 	string title; 
-	string readme;
-	bytes3 color;
+	string description;
+	bytes3 color; // sowas könnte in einen key-value-store
 	uint64 effort; // in seconds
 
 	uint16 loopWeight; 
 
+	mapping (address => Flow) inflows;
+
 	bool initialized; 
+  bool deleted; 
 
-	mapping (address => Flow) flowsFrom;
+  mapping (address => uint8) permissions; 
 
-  uint constant _initial_supply = (7 ** 12) * (10**18);
-  uint256 constant _max_shares = 2 ** 128 - 1;
-
-	mapping (uint128 => Aim) public aims; 
-	mapping (uint128 => mapping(uint128 => Flow)) public flows; // from into
-	mapping (address => uint128) public homes; 
-
-  constructor(address felix, uint256 amount) ERC20("Summits", "MM") {
-      _mint(felix, amount);
-      console.log("minted initial supply");
-      // hier im Konstruktor kann ich mir selbst tokens zuschreiben ohne sie zu bezahlen. Perks of creating systems. Denn der Konstruktor wird nur 
+  constructor(address creator, uint256 amount) ERC20("","") {
+    _mint(creator, amount);
   }
 
   function init(
-    address owner, 
-    string _title, 
-    string _initialDescription, 
+    address __owner, 
+    string calldata _title, 
+    string calldata _description, 
     uint64 _effort, 
     bytes3 _color, 
-    uint256 _initialShares, 
-  ) {
-    require(!initialized, "aim already initialized") 
+    string calldata _tokenName,
+    string calldata _tokenSymbol
+  ) public {
+    require(!initialized, "aim already initialized");
+    initialized = true; 
+
+		_owner = __owner; 
+
+		title = _title; 
+		color = _color; 
+		effort = _effort; 
+		description = _description; 
+
+		_name = _tokenName; 
+		_symbol = _tokenSymbol;
+	}
+
+	modifier onlyEditors() {
+    require(
+      msg.sender == _owner || (permissions[msg.sender] & EDITOR > 0),
+      "sender has no permission to edit this aim"
+    );
+    _;
   }
 
-	function createAim(
-		uint128 aimId, 
-		string calldata title, 
-		bytes3 color, 
-		uint64 calldata effort, 
-		string calldata detailsCid, 
-		uint128 initialShares
-	) public {
-		Aim storage a = aims[aimId]; 
+  modifier onlyNetworkers() {
+    require(
+      msg.sender == _owner || (permissions[msg.sender] & NETWORKER > 0),
+      "sender has no permission to change flows"
+    );
+    _;
+  }
 
-		require(!a.exists, "Aim with this id exists. Use other aimId."); 
-
-		uint256 initialDeposit = uint256(initialShares) * initialShares; 
-
-		_transfer(msg.sender, address(this), initialDeposit); 
-
-		a.exists = true; 
-
-		a.owner = msg.sender; 
-
-		a.title = title; 
-		a.color = color; 
-		a.effort = effort; 
-		a.detailsCid = detailsCid; 
-
-		a.sharesTook = initialShares;
-		a.shares[msg.sender] = initialShares; 
+	function updateTitle(
+		string calldata _title
+	) public onlyEditors {
+		title = _title;
 	}
 
-	function removeAim(
-		uint128 aimId
-	) public {
-		Aim storage a = aims[aimId];
-		require(a.exists, "No aim with this id exists"); 
-		a.exists = false;
+	function updateColor(
+		bytes3 _color
+	) public onlyEditors {
+		color = _color;
 	}
 
-	function requireExistingOwnedAim(
-		uint128 aimId
-	) internal view returns (Aim storage) {
-		Aim storage a = aims[aimId];
-		require(a.exists, "No aim with this id exists");
-		require(a.owner == msg.sender, "Sender does not own this aim");
-		return a;
+	function updateEffort(
+		uint64 _effort
+	) public onlyEditors {
+		effort = _effort;
 	}
 
-	function updateAimTitle(
-		uint128 aimId, 
-		string calldata title
-	) public {
-		requireExistingOwnedAim(aimId).title = title;
+	function updateDetailsCid(
+		string calldata _description 
+	) public onlyEditors {
+		description = _description;
 	}
 
-	function updateAimColor(
-		uint128 aimId, 
-		bytes3 color
-	) public {
-		requireExistingOwnedAim(aimId).color = color;
-	}
+	function buy (
+	  uint128 amount
+	) public payable {
+	  uint256 targetSupply = _totalSupply + amount; 
+	  require(targetSupply < MAX_TOKENS, "this should never happen");
+	  /* a bit more than half of all possible eth must be invested in this bonding curve 
+	    for the target amount exceeding MAX_TOKENS. 
+	    By this limit the following power calculations are safe */
 
-	function updateAimEffort(
-		uint128 aimId, 
-		Effort calldata effort
-	) public {
-		requireExistingOwnedAim(aimId).effort = effort;
-	}
+	  uint256 currentAccumulatedPrice = _totalSupply ** 2; 
+		uint256 targetAccumulatedPrice = targetSupply ** 2;
 
-	function updateAimDetailsCid(
-		uint128 aimId, 
-		string calldata detailsCid
-	) public {
-		requireExistingOwnedAim(aimId).detailsCid = detailsCid;
-	}
+		uint256 price = targetAccumulatedPrice - currentAccumulatedPrice; 
 
-	function updateAim(
-		uint128 aimId, 
-		string calldata title, 
-		bytes3 color, 
-		Effort calldata effort, 
-		string calldata detailsCid
-	) public {
-		Aim storage a = requireExistingOwnedAim(aimId); 
-		a.title = title;
-		a.color = color; 
-		a.effort = effort;
-		a.detailsCid = detailsCid;
-	}
-		
-	function deposit(
-		uint128 aimId, 
-		uint128 amount, 
-		uint128 current
-	) public {
-		Aim storage a = aims[aimId]; 
+		require(price <= msg.value, "insufficient eth sent"); 
 
-		require(a.exists, "No aim with this id exists."); 
-		require(a.sharesTook <= current, "Shares price rose. You might want to try again"); 
-		require(uint256(amount) + a.sharesTook <= _max_shares, "Max amount of shares exceeded. Buy less."); 
-	
-		uint256 targetDeposit = uint256(amount) * amount; 
-		uint256 currentDeposit = uint256(a.sharesTook) * a.sharesTook; 
-
-		_transfer(msg.sender, address(this), targetDeposit - currentDeposit);
-
-		a.sharesTook += amount; 
-		a.shares[msg.sender] += amount; 
+		if(msg.value == price || payable(msg.sender).send(msg.value - price)) {
+      _mint(msg.sender, amount);
+    } else {
+      revert("eth sent exceeds price and sender not payable");
+    }
 	}
 
 	function withdraw(
-		uint128 aimId, 
-		uint128 amount, 
-		uint128 current
+	  uint128 amount, 
+		uint256 minPayout
 	) public {
-		Aim storage a = aims[aimId]; 
+		require(amount <= _balances[msg.sender], "not enough tokens"); 
 
-		require(a.exists, "No aim with this id exists."); 
-		require(a.sharesTook >= current, "Shares price dropped. You might want to try again."); 
-		require(amount <= a.shares[msg.sender], "Not enough shares. Withdraw less."); 
-	
-		uint256 targetDeposit = uint256(amount) * amount; 
-		uint256 currentDeposit = uint256(a.sharesTook) * a.sharesTook; 
+		uint256 targetSupply = _totalSupply - amount;
 
-		_transfer(msg.sender, address(this), targetDeposit - currentDeposit);
+		uint256 currentAccumulatedPrice = _totalSupply ** 2; 
+		uint256 targetAccumulatedPrice = targetSupply ** 2; 
+		
+		uint256 payout = currentAccumulatedPrice - targetAccumulatedPrice; 
 
-		a.sharesTook += amount; 
-		a.shares[msg.sender] += amount; 
+		require(payout >= minPayout, "price dropped");
+
+    if(payable(msg.sender).send(payout)) {
+      _burn(msg.sender, amount); 
+    } else {
+      revert("sender not payable");
+    }
 	}
 
-	function createFlow(
-		uint128 fromAimId, 
-		uint128 intoAimId, 
-		uint16 share, 
-		string calldata detailsCid, 
+	function createInflow(
+		address _from, 
+		string calldata _explanation,
+		uint16 _weight, 
 		bytes4 dx, 
 		bytes4 dy
-	) public {
-		Aim storage intoAim = requireExistingOwnedAim(intoAimId);
-		Aim storage fromAim = aims[fromAimId]; 
-		require(fromAim.exists, "Flow source aim does not exist."); 
-		Flow storage flow = flows[fromAimId][intoAimId];
-		require(!flow.exists, "Flow exists.");
+	) public onlyNetworkers {
+		Flow storage flow = inflows[_from];
+
+		require(!flow.exists, "flow already exists");
 
 		flow.exists = true;
-		flow.share = share;
-		flow.detailsCid = detailsCid;
+
+		flow.weight = _weight;
+		flow.explanation = _explanation;
 		flow.dx = dx;
 		flow.dy = dy;
-
-		intoAim.flowsFrom.push(fromAimId);
-		fromAim.flowsInto.push(intoAimId);
 	}
 
-	function transferOwnership(
-    uint128 aimId, 
-    address newOwner
-  ) public {
-    Aim storage aim = requireExistingOwnedAim(aimId); 
-    aim.owner = newOwner;
-  }
-
-	function removeFlow(
-		uint128 fromAimId, 
-		uint128 intoAimId
-	) public {
-		requireExistingOwnedAim(intoAimId);
-		require(aims[fromAimId].exists, "Flow source aim does not exist."); 
-		Flow storage flow = flows[fromAimId][intoAimId];
-		require(flow.exists, "Flow does not exist.");
-		flow.exists = false;
-	}
-
-	function setHome(uint128 aimId) public {
-		homes[msg.sender] = aimId;
+	function removeInflow(
+		address _from
+	) public onlyNetworkers {
+	  inflows[_from].exists = false;  
 	}
 }	
 
