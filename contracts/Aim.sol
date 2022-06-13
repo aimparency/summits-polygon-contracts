@@ -23,9 +23,9 @@ struct Flow {
 	bytes4 dy; 
 }
 
-uint8 constant EDITOR = 1; 
-uint8 constant NETWORKER = 2; 
-uint8 constant MANAGER = 4; 
+uint8 constant EDIT = 0x01; 
+uint8 constant NETWORK = 0x02; 
+uint8 constant MANAGE = 0x04; 
 
 uint128 constant MAX_TOKENS = uint128(0) - 1;
 
@@ -40,20 +40,14 @@ contract Aim is Ownable, ERC20 {
 	string private _symbol; 
 
   // Aim attributes
-
-	string title; 
-	string description;
-	bytes3 color; // sowas könnte in einen key-value-store
-	uint64 effort; // in seconds
-
-	uint16 loopWeight; 
-
-	mapping (address => Flow) inflows;
-
-	bool initialized; 
-  bool deleted; 
-
-  mapping (address => uint8) permissions; 
+	bool public initialized; 
+	string public title; 
+	string public description;
+	bytes3 public color; // sowas könnte in einen key-value-store
+	uint64 public effort; // in seconds
+	uint16 public loopWeight; 
+	mapping (address => Flow) public inflows;
+  mapping (address => uint8) public permissions; 
 
   constructor(address creator, uint256 amount) ERC20("","") {
     _mint(creator, amount);
@@ -84,7 +78,7 @@ contract Aim is Ownable, ERC20 {
 
 	modifier onlyEditors() {
     require(
-      msg.sender == _owner || (permissions[msg.sender] & EDITOR > 0),
+      msg.sender == _owner || (permissions[msg.sender] & EDIT > 0),
       "sender has no permission to edit this aim"
     );
     _;
@@ -92,7 +86,7 @@ contract Aim is Ownable, ERC20 {
 
   modifier onlyNetworkers() {
     require(
-      msg.sender == _owner || (permissions[msg.sender] & NETWORKER > 0),
+      msg.sender == _owner || (permissions[msg.sender] & NETWORK > 0),
       "sender has no permission to change flows"
     );
     _;
@@ -191,5 +185,20 @@ contract Aim is Ownable, ERC20 {
 	) public onlyNetworkers {
 	  inflows[_from].exists = false;  
 	}
+
+//	function getData() public view returns (
+//	  string memory title_, 
+//    string memory description_, 
+//    uint16 loopWeight_, 
+//    uint8 permissions_,
+//    uint64 effort_,
+//    bytes3 color_
+//	) {
+//	  return (title, description, loopWeight, permissions, effort, color);
+//  }
+//
+//  function getInflows() public view returns (Flow [] inflows_) {
+//    return ;
+//  }
 }	
 

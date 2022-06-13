@@ -6,6 +6,8 @@ import "./Aim.sol";
 
 contract Summits {
   Aim public baseAim; 
+  // bytes private cloneCode; // TBD? instead of reconstructing the bytes, save it?
+    // storage vs calc tradeof
 
   event AimCreated(Aim newAimAddress); 
 
@@ -19,7 +21,7 @@ contract Summits {
       "aimparency", 
       "An efficient socioeconomic system", 
       100 * 31557600, // 100 years
-      0x555555,
+      0x999999,
       "Aimparency", 
       "MPRNC"
     );
@@ -53,7 +55,7 @@ contract Summits {
 
   function createAimMimicker() internal returns(Aim mimicker)  {
     bytes20 targetBytes = bytes20(address(baseAim));
-    // TODO: Optimization: create this code on baseAim change
+    // TODO?: Optimization?: create this code on baseAim change?
     assembly {
       let code:= mload(0x40)
       mstore(code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
