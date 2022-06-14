@@ -14,7 +14,7 @@ contract Summits {
   constructor() {
     baseAim = new Aim(
       msg.sender, 
-      1337 * 3
+      2 * 10 ** 9 // equals 4 ETH
     );
     baseAim.init(
       msg.sender,

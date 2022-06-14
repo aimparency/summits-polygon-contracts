@@ -30,14 +30,8 @@ uint8 constant MANAGE = 0x04;
 uint128 constant MAX_TOKENS = uint128(0) - 1;
 
 contract Aim is Ownable, ERC20 {
-  // make Ownable attributes accessible
-  address private _owner;
-
-  // make ERC20 attributes accessible
-  mapping(address => uint256) private _balances;
-  uint256 private _totalSupply;
-	string private _name; 
-	string private _symbol; 
+	string internal tokenName; 
+	string internal tokenSymbol; 
 
   // Aim attributes
 	bool public initialized; 
@@ -48,8 +42,9 @@ contract Aim is Ownable, ERC20 {
 	uint16 public loopWeight; 
 	mapping (address => Flow) public inflows;
   mapping (address => uint8) public permissions; 
+  mapping (address => bool) public outflowApprovals; 
 
-  constructor(address creator, uint256 amount) ERC20("","") {
+  constructor(address creator, uint256 amount) ERC20("erc20 field name","erc20 field symbol") {
     _mint(creator, amount);
   }
 
@@ -65,20 +60,28 @@ contract Aim is Ownable, ERC20 {
     require(!initialized, "aim already initialized");
     initialized = true; 
 
-		_owner = __owner; 
+		_transferOwnership(__owner);
 
 		title = _title; 
 		color = _color; 
 		effort = _effort; 
 		description = _description; 
 
-		_name = _tokenName; 
-		_symbol = _tokenSymbol;
+		tokenName = _tokenName; 
+		tokenSymbol = _tokenSymbol;
 	}
+
+	function name() public view virtual override returns(string memory) {
+    return tokenName;
+  }
+
+	function symbol() public view virtual override returns(string memory) {
+    return tokenSymbol;
+  }
 
 	modifier onlyEditors() {
     require(
-      msg.sender == _owner || (permissions[msg.sender] & EDIT > 0),
+      msg.sender == owner() || (permissions[msg.sender] & EDIT > 0),
       "sender has no permission to edit this aim"
     );
     _;
@@ -86,7 +89,7 @@ contract Aim is Ownable, ERC20 {
 
   modifier onlyNetworkers() {
     require(
-      msg.sender == _owner || (permissions[msg.sender] & NETWORK > 0),
+      msg.sender == owner() || (permissions[msg.sender] & NETWORK > 0),
       "sender has no permission to change flows"
     );
     _;
@@ -116,16 +119,24 @@ contract Aim is Ownable, ERC20 {
 		description = _description;
 	}
 
+	function getPermissions() public view returns (uint8) {
+    return permissions[msg.sender];
+  }
+
+	function getInvestment() public view returns (uint256) {
+    return balanceOf(msg.sender); 
+  }
+
 	function buy (
 	  uint128 amount
 	) public payable {
-	  uint256 targetSupply = _totalSupply + amount; 
+	  uint256 targetSupply = totalSupply() + amount; 
 	  require(targetSupply < MAX_TOKENS, "this should never happen");
 	  /* a bit more than half of all possible eth must be invested in this bonding curve 
 	    for the target amount exceeding MAX_TOKENS. 
 	    By this limit the following power calculations are safe */
 
-	  uint256 currentAccumulatedPrice = _totalSupply ** 2; 
+	  uint256 currentAccumulatedPrice = totalSupply() ** 2; 
 		uint256 targetAccumulatedPrice = targetSupply ** 2;
 
 		uint256 price = targetAccumulatedPrice - currentAccumulatedPrice; 
@@ -143,11 +154,11 @@ contract Aim is Ownable, ERC20 {
 	  uint128 amount, 
 		uint256 minPayout
 	) public {
-		require(amount <= _balances[msg.sender], "not enough tokens"); 
+		require(amount <= balanceOf(msg.sender), "not enough tokens"); 
 
-		uint256 targetSupply = _totalSupply - amount;
+		uint256 targetSupply = totalSupply() - amount;
 
-		uint256 currentAccumulatedPrice = _totalSupply ** 2; 
+		uint256 currentAccumulatedPrice = totalSupply() ** 2; 
 		uint256 targetAccumulatedPrice = targetSupply ** 2; 
 		
 		uint256 payout = currentAccumulatedPrice - targetAccumulatedPrice; 
