@@ -9,7 +9,7 @@ contract Summits {
   // bytes private cloneCode; // TBD? instead of reconstructing the bytes, save it?
     // storage vs calc tradeof
 
-  event AimCreated(Aim newAimAddress); 
+  event AimCreated(address newAimAddress); 
 
   constructor() {
     baseAim = new Aim(
@@ -46,7 +46,7 @@ contract Summits {
       _tokenName, 
       _tokenSymbol
     );
-    emit AimCreated(aim);
+    emit AimCreated(address(aim));
     if(_initialAmount > 0) {
       aim.buy(_initialAmount);
     }
@@ -81,6 +81,13 @@ contract Summits {
       )
     }
   }
+
+  event TestEvent(int8); 
+
+  function test() public payable {
+    emit AimCreated(address(baseAim));
+  }
+
 }
 
 // maintain list of aims? it's implicitly there in the history of createAim calls

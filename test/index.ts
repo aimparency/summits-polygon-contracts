@@ -1,12 +1,18 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("Summits", function () {
-  it("should be able to get the base aim, which should have a certain token supply", async function () {
-    const Summits = await ethers.getContractFactory("Summits");
-    const summits = await Summits.deploy();
-    await summits.deployed();
+import Summits from '../typechain/Summits'
 
+describe("Summits", function () {
+  let summits: Summits.Summits
+
+  this.beforeEach(async function() {
+    let summitsFactory = await ethers.getContractFactory("Summits");
+    summits = await summitsFactory.deploy();
+    await summits.deployed();
+  }) 
+
+  it("should be able to get the base aim, which should have a certain token supply", async function () {
     const baseAimAddr = await summits.baseAim()
 
     const Aim = await ethers.getContractFactory("Aim");
@@ -18,12 +24,6 @@ describe("Summits", function () {
   })
 
   it("should be able to create a new aim", async function () {
-    const Summits = await ethers.getContractFactory("Summits");
-    const summits = await Summits.deploy()
-    await summits.deployed()
-
-    let [owner] = await ethers.getSigners()
-
     await summits.createAim(
       '', '', 20, [255,0,0], 'Testaim', 'TST', 0
     )
@@ -32,7 +32,7 @@ describe("Summits", function () {
       'test', 'descr..', 10000, [255,0,0], 'Testaim', 'TST', 0
     )
 
-    console.log(response)
+    console.log(response) 
 
     // const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
 
@@ -41,6 +41,10 @@ describe("Summits", function () {
 
     // expect(await greeter.greet()).to.equal("Hola, mundo!");
 
+  })
+
+  it("should successfully call test function", async function () {
+    summits.test()
   })
 
 });
