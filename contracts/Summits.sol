@@ -35,7 +35,7 @@ contract Summits {
     string calldata _tokenName, 
     string calldata _tokenSymbol, 
     uint128 _initialAmount
-  ) public returns (address aimAddress) {
+  ) public payable returns (address aimAddress) {
     Aim aim = createAimMimicker(); 
     aim.init(
       msg.sender,
