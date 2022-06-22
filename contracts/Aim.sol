@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.1; 
+pragma solidity ^0.8.9; 
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -16,8 +16,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 struct Flow {
 	bool exists;
+
 	string explanation;
-	// uint8[][] explanationChanges; // save delta
 	uint16 weight;
 	bytes4 dx; // float32
 	bytes4 dy; 
@@ -27,7 +27,7 @@ uint8 constant EDIT = 0x01;
 uint8 constant NETWORK = 0x02; 
 uint8 constant MANAGE = 0x04; 
 
-uint128 constant MAX_TOKENS = uint128(0) - 1;
+uint128 constant MAX_TOKENS = 0xffffffffffffffffffffffffffffffff;
 
 contract Aim is Ownable, ERC20 {
 	string internal tokenName; 
@@ -40,13 +40,19 @@ contract Aim is Ownable, ERC20 {
 	bytes3 public color; // sowas könnte in einen key-value-store
 	uint64 public effort; // in seconds
 	uint16 public loopWeight; 
-	mapping (address => Flow) public inflows;
+
   mapping (address => uint8) public permissions; 
-  mapping (address => bool) public outflowApprovals; 
+
+	address [] inflowAddresses; 
+	mapping (address => Flow) public inflows;
 
   constructor(address creator, uint256 amount) ERC20("erc20 field name","erc20 field symbol") {
+    console.log(MAX_TOKENS);
     _mint(creator, amount);
   }
+
+  event FlowCreation(address from, address to); 
+  event FlowRemoval(address from, address to); 
 
   function init(
     address __owner, 
@@ -130,20 +136,26 @@ contract Aim is Ownable, ERC20 {
 	function buy (
 	  uint128 amount
 	) public payable {
+	  console.log("buying", amount, tokenSymbol); 
 	  uint256 targetSupply = totalSupply() + amount; 
-	  require(targetSupply < MAX_TOKENS, "this should never happen");
+	  require(targetSupply < MAX_TOKENS, "");
 	  /* a bit more than half of all possible eth must be invested in this bonding curve 
 	    for the target amount exceeding MAX_TOKENS. 
 	    By this limit the following power calculations are safe */
+
+	  console.log("targetSupply", targetSupply); 
 
 	  uint256 currentAccumulatedPrice = totalSupply() ** 2; 
 		uint256 targetAccumulatedPrice = targetSupply ** 2;
 
 		uint256 price = targetAccumulatedPrice - currentAccumulatedPrice; 
 
+	  console.log("targetSupply", price); 
+
 		require(price <= msg.value, "insufficient eth sent"); 
 
-		if(msg.value == price || payable(msg.sender).send(msg.value - price)) {
+		if(msg.value == price || payable(msg.sender).send(msg.value - price)) { // diese Zeile könnte Probleme machen
+      console.log("minting", amount); 
       _mint(msg.sender, amount);
     } else {
       revert("eth sent exceeds price and sender not payable");
@@ -189,27 +201,23 @@ contract Aim is Ownable, ERC20 {
 		flow.explanation = _explanation;
 		flow.dx = dx;
 		flow.dy = dy;
+
+		inflowAddresses.push(_from);
+
+		emit FlowCreation(_from, address(this));
 	}
 
 	function removeInflow(
 		address _from
 	) public onlyNetworkers {
-	  inflows[_from].exists = false;  
+	  Flow storage flow = inflows[_from]; 
+	  flow.exists = false;  
+
+	  emit FlowRemoval(_from, address(this));
 	}
 
-//	function getData() public view returns (
-//	  string memory title_, 
-//    string memory description_, 
-//    uint16 loopWeight_, 
-//    uint8 permissions_,
-//    uint64 effort_,
-//    bytes3 color_
-//	) {
-//	  return (title, description, loopWeight, permissions, effort, color);
-//  }
-//
-//  function getInflows() public view returns (Flow [] inflows_) {
-//    return ;
-//  }
+  function getInflows() public view returns( address [] memory ) {
+    return inflowAddresses; 
+  }
 }	
 

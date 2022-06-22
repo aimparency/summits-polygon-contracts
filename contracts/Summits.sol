@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.9;
 
 import "hardhat/console.sol";
 import "./Aim.sol"; 
@@ -8,8 +8,10 @@ contract Summits {
   Aim public baseAim; 
   // bytes private cloneCode; // TBD? instead of reconstructing the bytes, save it?
     // storage vs calc tradeof
+  
+  Aim [] aims; 
 
-  event AimCreated(address newAimAddress); 
+  event AimCreation(address aimAddress); 
 
   constructor() {
     baseAim = new Aim(
@@ -36,7 +38,8 @@ contract Summits {
     string calldata _tokenSymbol, 
     uint128 _initialAmount
   ) public payable returns (address aimAddress) {
-    Aim aim = createAimMimicker(); 
+    aimAddress = createAimMimicker(); 
+    Aim aim = Aim(aimAddress); 
     aim.init(
       msg.sender,
       _title,
@@ -46,14 +49,15 @@ contract Summits {
       _tokenName, 
       _tokenSymbol
     );
-    emit AimCreated(address(aim));
+    emit AimCreation(aimAddress);
+    console.log("created aim", aimAddress, " - calling buy");
+    aims.push(aim); 
     if(_initialAmount > 0) {
-      aim.buy(_initialAmount);
+      aim.buy{value: msg.value}(_initialAmount);
     }
-    return address(aim);
   }
 
-  function createAimMimicker() internal returns(Aim mimicker)  {
+  function createAimMimicker() internal returns(address mimickerAddress)  {
     bytes20 targetBytes = bytes20(address(baseAim));
     // TODO?: Optimization?: create this code on baseAim change?
     assembly {
@@ -61,7 +65,7 @@ contract Summits {
       mstore(code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
       mstore(add(code, 0x14), targetBytes)
       mstore(add(code, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-      mimicker := create(0, code, 0x37)
+      mimickerAddress := create(0, code, 0x37)
     }
   }
 
@@ -81,13 +85,6 @@ contract Summits {
       )
     }
   }
-
-  event TestEvent(int8); 
-
-  function test() public payable {
-    emit AimCreated(address(baseAim));
-  }
-
 }
 
 // maintain list of aims? it's implicitly there in the history of createAim calls
