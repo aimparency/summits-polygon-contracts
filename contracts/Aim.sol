@@ -33,12 +33,14 @@ contract Aim is Ownable, ERC20 {
 	string internal tokenName; 
 	string internal tokenSymbol; 
 
-  // Aim attributes
 	bool public initialized; 
+
 	string public title; 
 	string public description;
+	string public state;
+	uint64 public effort; 
 	bytes3 public color; // sowas könnte in einen key-value-store
-	uint64 public effort; // in seconds
+
 	uint16 public loopWeight; 
 
   mapping (address => uint8) public permissions; 
@@ -46,7 +48,7 @@ contract Aim is Ownable, ERC20 {
 	address [] inflowAddresses; 
 	mapping (address => Flow) public inflows;
 
-  constructor(address creator, uint256 amount) ERC20("erc20 field name","erc20 field symbol") {
+  constructor(address creator, uint256 amount) ERC20("","") {
     console.log(MAX_TOKENS);
     _mint(creator, amount);
   }
@@ -101,17 +103,120 @@ contract Aim is Ownable, ERC20 {
     _;
   }
 
+  // updateTitleDescriptionStateEffortColor - update permutations begin
+
 	function updateTitle(
 		string calldata _title
 	) public onlyEditors {
 		title = _title;
 	}
 
-	function updateColor(
+	function updateTitleDescription(
+		string calldata _title,
+		string calldata _description 
+	) public onlyEditors {
+		title = _title;
+		description = _description;
+	}
+
+	function updateTitleDescriptionState(
+		string calldata _title,
+		string calldata _description,
+		string calldata _state
+	) public onlyEditors {
+		title = _title;
+		description = _description;
+		state = _state;
+	}
+
+	function updateTitleDescriptionStateEffort(
+		string calldata _title,
+		string calldata _description,
+		string calldata _state,
+		uint64 _effort
+	) public onlyEditors {
+		title = _title;
+		description = _description;
+		state = _state;
+		effort = _effort;
+	}
+
+	function updateTitleDescriptionStateEffortColor(
+		string calldata _title,
+		string calldata _description,
+		string calldata _state,
+		uint64 _effort,
 		bytes3 _color
 	) public onlyEditors {
+		title = _title;
+		description = _description;
+		state = _state;
+		effort = _effort;
 		color = _color;
 	}
+
+	
+	function updateDescription(
+		string calldata _description 
+	) public onlyEditors {
+		description = _description;
+	}
+
+	function updateDescriptionState(
+		string calldata _description,
+		string calldata _state
+	) public onlyEditors {
+		description = _description;
+		state = _state;
+	}
+
+	function updateDescriptionStateEffort(
+		string calldata _description,
+		string calldata _state,
+		uint64 _effort
+	) public onlyEditors {
+		description = _description;
+		state = _state;
+		effort = _effort;
+	}
+
+	function updateDescriptionStateEffortColor(
+		string calldata _description,
+		string calldata _state,
+		uint64 _effort,
+		bytes3 _color
+	) public onlyEditors {
+		description = _description;
+		state = _state;
+		effort = _effort;
+		color = _color;
+	}
+
+
+	function updateState(
+		string calldata _state
+	) public onlyEditors {
+		state = _state;
+	}
+
+	function updateStateEffort(
+		string calldata _state,
+		uint64 _effort
+	) public onlyEditors {
+		state = _state;
+		effort = _effort;
+	}
+
+	function updateStateEffortColor(
+		string calldata _state,
+		uint64 _effort,
+		bytes3 _color
+	) public onlyEditors {
+		state = _state;
+		effort = _effort;
+		color = _color;
+	}
+
 
 	function updateEffort(
 		uint64 _effort
@@ -119,11 +224,24 @@ contract Aim is Ownable, ERC20 {
 		effort = _effort;
 	}
 
-	function updateDetailsCid(
-		string calldata _description 
+	function updateEffortColor(
+		uint64 _effort,
+		bytes3 _color
 	) public onlyEditors {
-		description = _description;
+		effort = _effort;
+		color = _color;
 	}
+
+
+	function updateColor(
+		bytes3 _color
+	) public onlyEditors {
+		color = _color;
+	}
+
+	// update permutations end
+
+
 
 	function getPermissions() public view returns (uint8) {
     return permissions[msg.sender];
@@ -162,7 +280,7 @@ contract Aim is Ownable, ERC20 {
     }
 	}
 
-	function withdraw(
+	function sell(
 	  uint128 amount, 
 		uint256 minPayout
 	) public {
