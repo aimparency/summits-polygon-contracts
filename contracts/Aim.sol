@@ -48,35 +48,41 @@ contract Aim is Ownable, ERC20 {
 	address [] inflowAddresses; 
 	mapping (address => Flow) public inflows;
 
-  constructor(address creator, uint256 amount) ERC20("","") {
-    console.log(MAX_TOKENS);
-    _mint(creator, amount);
+  constructor(address creator, uint128 initialAmount) payable ERC20("", "") {
+    require(msg.value == uint256(initialAmount) ** 2); 
+    _mint(creator, initialAmount);
+    title = "aimparency"; 
+    description = "an efficient socioeconomic system"; 
+    tokenName = "aimparencent";
+    tokenSymbol = "MPRNC";
   }
 
   event FlowCreation(address from, address to); 
   event FlowRemoval(address from, address to); 
 
   function init(
-    address __owner, 
+    address creator, 
     string calldata _title, 
-    string calldata _description, 
-    uint64 _effort, 
-    bytes3 _color, 
     string calldata _tokenName,
-    string calldata _tokenSymbol
-  ) public {
-    require(!initialized, "aim already initialized");
+    string calldata _tokenSymbol,
+    uint128 initialAmount
+  ) public payable {
+    require(!initialized, "aims can only be initialized once");
+    require(
+      uint256(initialAmount) * initialAmount == msg.value, 
+      "initial investment requires funds to equal the square of initial token amount"
+    ); 
+
     initialized = true; 
 
-		_transferOwnership(__owner);
+		_transferOwnership(creator);
 
 		title = _title; 
-		color = _color; 
-		effort = _effort; 
-		description = _description; 
 
 		tokenName = _tokenName; 
 		tokenSymbol = _tokenSymbol;
+
+    _mint(creator, initialAmount);
 	}
 
 	function name() public view virtual override returns(string memory) {
@@ -270,13 +276,13 @@ contract Aim is Ownable, ERC20 {
 
 	  console.log("targetSupply", price); 
 
-		require(price <= msg.value, "insufficient eth sent"); 
+		require(price <= msg.value, "insufficient funds sent"); 
 
 		if(msg.value == price || payable(msg.sender).send(msg.value - price)) { // diese Zeile könnte Probleme machen
       console.log("minting", amount); 
       _mint(msg.sender, amount);
     } else {
-      revert("eth sent exceeds price and sender not payable");
+      revert("funds sent exceeds price and sender not payable");
     }
 	}
 
@@ -299,6 +305,7 @@ contract Aim is Ownable, ERC20 {
       _burn(msg.sender, amount); 
     } else {
       revert("sender not payable");
+      // or not enough funds in contract, which should never happen
     }
 	}
 

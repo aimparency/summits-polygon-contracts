@@ -13,48 +13,31 @@ contract Summits {
 
   event AimCreation(address aimAddress); 
 
-  constructor() {
-    baseAim = new Aim(
+  constructor(uint128 initialAmount) payable {
+    baseAim = new Aim{value: msg.value}(
       msg.sender, 
-      2 * 10 ** 9 // equals 4 ETH
-    );
-    baseAim.init(
-      msg.sender,
-      "aimparency", 
-      "An efficient socioeconomic system", 
-      100 * 31557600, // 100 years
-      0x999999,
-      "Aimparency", 
-      "MPRNC"
-    );
+      initialAmount
+    ); 
+    emit AimCreation(address(baseAim)); 
   }
 
   function createAim(
     string calldata _title, 
-    string calldata _initialDescription, 
-    uint64 _effort, 
-    bytes3 _color, 
     string calldata _tokenName, 
     string calldata _tokenSymbol, 
     uint128 _initialAmount
   ) public payable returns (address aimAddress) {
     aimAddress = createAimMimicker(); 
     Aim aim = Aim(aimAddress); 
-    aim.init(
+    aim.init{value: msg.value}(
       msg.sender,
       _title,
-      _initialDescription, 
-      _effort, 
-      _color, 
       _tokenName, 
-      _tokenSymbol
+      _tokenSymbol, 
+      _initialAmount
     );
     emit AimCreation(aimAddress);
-    console.log("created aim", aimAddress, " - calling buy");
     aims.push(aim); 
-    if(_initialAmount > 0) {
-      aim.buy{value: msg.value}(_initialAmount);
-    }
   }
 
   function createAimMimicker() internal returns(address mimickerAddress)  {

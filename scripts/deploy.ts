@@ -13,9 +13,13 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
+  const initialTokens = ethers.BigNumber.from("2000000000")  
+  const initialPrice = initialTokens.pow(2)
   // We get the contract to deploy
   const Summits = await ethers.getContractFactory("Summits");
-  const summits = await Summits.deploy()
+  const summits = await Summits.deploy(initialTokens, {
+    value: initialPrice
+  }) 
 
   await summits.deployed();
 
