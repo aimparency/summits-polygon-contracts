@@ -6,21 +6,25 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// enum Rights {
-// 	ALL, 
-// 	MANAGE, 
-// 	MODIFY
-// }
+struct AimData {
+	string title; 
+	string description;
+	string status;
+	uint64 effort; 
+	bytes3 color; 
+}
 
-/* Do not allow your master contract to be self-destructed as it will cause all clones to stop working, thus freezing their state and balances. */
+struct FlowData {
+	string explanation;
+	bytes4 d2d; // 2x float16
+}
 
 struct Flow {
 	bool exists;
 
-	string explanation;
 	uint16 weight;
-	bytes4 dx; // float32
-	bytes4 dy; 
+
+  FlowData data; 
 }
 
 uint8 constant EDIT = 0x01; 
@@ -35,13 +39,9 @@ contract Aim is Ownable, ERC20 {
 
 	bool public initialized; 
 
-	string public title; 
-	string public description;
-	string public state;
-	uint64 public effort; 
-	bytes3 public color; // sowas könnte in einen key-value-store
-
 	uint16 public loopWeight; 
+
+	AimData public data;
 
   mapping (address => uint8) public permissions; 
 
@@ -50,9 +50,15 @@ contract Aim is Ownable, ERC20 {
 
   constructor(address creator, uint128 initialAmount) payable ERC20("", "") {
     require(msg.value == uint256(initialAmount) ** 2); 
+
     _mint(creator, initialAmount);
-    title = "aimparency"; 
-    description = "an efficient socioeconomic system"; 
+
+    data.title = "aimparency"; 
+    data.status = "wip"; 
+    data.description = "an efficient socioeconomic system"; 
+    data.effort = 60 * 60 * 24 * 356 * 30;
+    data.color = 0x999999;
+
     tokenName = "aimparencent";
     tokenSymbol = "MPRNC";
   }
@@ -62,7 +68,7 @@ contract Aim is Ownable, ERC20 {
 
   function init(
     address creator, 
-    string calldata _title, 
+    AimData calldata _data, 
     string calldata _tokenName,
     string calldata _tokenSymbol,
     uint128 initialAmount
@@ -77,7 +83,7 @@ contract Aim is Ownable, ERC20 {
 
 		_transferOwnership(creator);
 
-		title = _title; 
+		data = _data;
 
 		tokenName = _tokenName; 
 		tokenSymbol = _tokenSymbol;
@@ -108,146 +114,6 @@ contract Aim is Ownable, ERC20 {
     );
     _;
   }
-
-  // updateTitleDescriptionStateEffortColor - update permutations begin
-
-	function updateTitle(
-		string calldata _title
-	) public onlyEditors {
-		title = _title;
-	}
-
-	function updateTitleDescription(
-		string calldata _title,
-		string calldata _description 
-	) public onlyEditors {
-		title = _title;
-		description = _description;
-	}
-
-	function updateTitleDescriptionState(
-		string calldata _title,
-		string calldata _description,
-		string calldata _state
-	) public onlyEditors {
-		title = _title;
-		description = _description;
-		state = _state;
-	}
-
-	function updateTitleDescriptionStateEffort(
-		string calldata _title,
-		string calldata _description,
-		string calldata _state,
-		uint64 _effort
-	) public onlyEditors {
-		title = _title;
-		description = _description;
-		state = _state;
-		effort = _effort;
-	}
-
-	function updateTitleDescriptionStateEffortColor(
-		string calldata _title,
-		string calldata _description,
-		string calldata _state,
-		uint64 _effort,
-		bytes3 _color
-	) public onlyEditors {
-		title = _title;
-		description = _description;
-		state = _state;
-		effort = _effort;
-		color = _color;
-	}
-
-	
-	function updateDescription(
-		string calldata _description 
-	) public onlyEditors {
-		description = _description;
-	}
-
-	function updateDescriptionState(
-		string calldata _description,
-		string calldata _state
-	) public onlyEditors {
-		description = _description;
-		state = _state;
-	}
-
-	function updateDescriptionStateEffort(
-		string calldata _description,
-		string calldata _state,
-		uint64 _effort
-	) public onlyEditors {
-		description = _description;
-		state = _state;
-		effort = _effort;
-	}
-
-	function updateDescriptionStateEffortColor(
-		string calldata _description,
-		string calldata _state,
-		uint64 _effort,
-		bytes3 _color
-	) public onlyEditors {
-		description = _description;
-		state = _state;
-		effort = _effort;
-		color = _color;
-	}
-
-
-	function updateState(
-		string calldata _state
-	) public onlyEditors {
-		state = _state;
-	}
-
-	function updateStateEffort(
-		string calldata _state,
-		uint64 _effort
-	) public onlyEditors {
-		state = _state;
-		effort = _effort;
-	}
-
-	function updateStateEffortColor(
-		string calldata _state,
-		uint64 _effort,
-		bytes3 _color
-	) public onlyEditors {
-		state = _state;
-		effort = _effort;
-		color = _color;
-	}
-
-
-	function updateEffort(
-		uint64 _effort
-	) public onlyEditors {
-		effort = _effort;
-	}
-
-	function updateEffortColor(
-		uint64 _effort,
-		bytes3 _color
-	) public onlyEditors {
-		effort = _effort;
-		color = _color;
-	}
-
-
-	function updateColor(
-		bytes3 _color
-	) public onlyEditors {
-		color = _color;
-	}
-
-	// update permutations end
-
-
 
 	function getPermissions() public view returns (uint8) {
     return permissions[msg.sender];
@@ -311,10 +177,8 @@ contract Aim is Ownable, ERC20 {
 
 	function createInflow(
 		address _from, 
-		string calldata _explanation,
 		uint16 _weight, 
-		bytes4 dx, 
-		bytes4 dy
+		FlowData calldata _data
 	) public onlyNetworkers {
 		Flow storage flow = inflows[_from];
 
@@ -323,9 +187,8 @@ contract Aim is Ownable, ERC20 {
 		flow.exists = true;
 
 		flow.weight = _weight;
-		flow.explanation = _explanation;
-		flow.dx = dx;
-		flow.dy = dy;
+
+		flow.data = _data;
 
 		inflowAddresses.push(_from);
 
@@ -344,5 +207,319 @@ contract Aim is Ownable, ERC20 {
   function getInflows() public view returns( address [] memory ) {
     return inflowAddresses; 
   }
+
+  // use ../codegen to autogen the following combinations of setters for aims and flows
+  // aim updates
+	function updateAimTitle(
+	  string calldata _title
+	) public onlyEditors {
+	  data.title = _title;
+	}
+
+	function updateAimDescription(
+	  string calldata _description
+	) public onlyEditors {
+	  data.description = _description;
+	}
+
+	function updateAimTitleDescription(
+	  string calldata _title,
+	  string calldata _description
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	}
+
+	function updateAimStatus(
+	  string calldata _status
+	) public onlyEditors {
+	  data.status = _status;
+	}
+
+	function updateAimTitleStatus(
+	  string calldata _title,
+	  string calldata _status
+	) public onlyEditors {
+	  data.title = _title;
+	  data.status = _status;
+	}
+
+	function updateAimDescriptionStatus(
+	  string calldata _description,
+	  string calldata _status
+	) public onlyEditors {
+	  data.description = _description;
+	  data.status = _status;
+	}
+
+	function updateAimTitleDescriptionStatus(
+	  string calldata _title,
+	  string calldata _description,
+	  string calldata _status
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.status = _status;
+	}
+
+	function updateAimEffort(
+	  uint64 _effort
+	) public onlyEditors {
+	  data.effort = _effort;
+	}
+
+	function updateAimTitleEffort(
+	  string calldata _title,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.title = _title;
+	  data.effort = _effort;
+	}
+
+	function updateAimDescriptionEffort(
+	  string calldata _description,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.description = _description;
+	  data.effort = _effort;
+	}
+
+	function updateAimTitleDescriptionEffort(
+	  string calldata _title,
+	  string calldata _description,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.effort = _effort;
+	}
+
+	function updateAimStatusEffort(
+	  string calldata _status,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.status = _status;
+	  data.effort = _effort;
+	}
+
+	function updateAimTitleStatusEffort(
+	  string calldata _title,
+	  string calldata _status,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.title = _title;
+	  data.status = _status;
+	  data.effort = _effort;
+	}
+
+	function updateAimDescriptionStatusEffort(
+	  string calldata _description,
+	  string calldata _status,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.description = _description;
+	  data.status = _status;
+	  data.effort = _effort;
+	}
+
+	function updateAimTitleDescriptionStatusEffort(
+	  string calldata _title,
+	  string calldata _description,
+	  string calldata _status,
+	  uint64 _effort
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.status = _status;
+	  data.effort = _effort;
+	}
+
+	function updateAimColor(
+	  bytes3 _color
+	) public onlyEditors {
+	  data.color = _color;
+	}
+
+	function updateAimTitleColor(
+	  string calldata _title,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.color = _color;
+	}
+
+	function updateAimDescriptionColor(
+	  string calldata _description,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.description = _description;
+	  data.color = _color;
+	}
+
+	function updateAimTitleDescriptionColor(
+	  string calldata _title,
+	  string calldata _description,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.color = _color;
+	}
+
+	function updateAimStatusColor(
+	  string calldata _status,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.status = _status;
+	  data.color = _color;
+	}
+
+	function updateAimTitleStatusColor(
+	  string calldata _title,
+	  string calldata _status,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.status = _status;
+	  data.color = _color;
+	}
+
+	function updateAimDescriptionStatusColor(
+	  string calldata _description,
+	  string calldata _status,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.description = _description;
+	  data.status = _status;
+	  data.color = _color;
+	}
+
+	function updateAimTitleDescriptionStatusColor(
+	  string calldata _title,
+	  string calldata _description,
+	  string calldata _status,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.status = _status;
+	  data.color = _color;
+	}
+
+	function updateAimEffortColor(
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimTitleEffortColor(
+	  string calldata _title,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimDescriptionEffortColor(
+	  string calldata _description,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.description = _description;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimTitleDescriptionEffortColor(
+	  string calldata _title,
+	  string calldata _description,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimStatusEffortColor(
+	  string calldata _status,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.status = _status;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimTitleStatusEffortColor(
+	  string calldata _title,
+	  string calldata _status,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.status = _status;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimDescriptionStatusEffortColor(
+	  string calldata _description,
+	  string calldata _status,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.description = _description;
+	  data.status = _status;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+	function updateAimTitleDescriptionStatusEffortColor(
+	  string calldata _title,
+	  string calldata _description,
+	  string calldata _status,
+	  uint64 _effort,
+	  bytes3 _color
+	) public onlyEditors {
+	  data.title = _title;
+	  data.description = _description;
+	  data.status = _status;
+	  data.effort = _effort;
+	  data.color = _color;
+	}
+
+  // flow updates
+
+	function updateFlowExplanation(
+	  address _from,
+	  string calldata _explanation
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.explanation = _explanation;
+	}
+
+	function updateFlowD2d(
+	  address _from,
+	  bytes4 _d2d
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.d2d = _d2d;
+	}
+
+	function updateFlowExplanationD2d(
+	  address _from,
+	  string calldata _explanation,
+	  bytes4 _d2d
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.explanation = _explanation;
+	  flowData.d2d = _d2d;
+	}
 }	
 

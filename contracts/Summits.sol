@@ -22,7 +22,7 @@ contract Summits {
   }
 
   function createAim(
-    string calldata _title, 
+    AimData calldata _data, 
     string calldata _tokenName, 
     string calldata _tokenSymbol, 
     uint128 _initialAmount
@@ -31,7 +31,7 @@ contract Summits {
     Aim aim = Aim(aimAddress); 
     aim.init{value: msg.value}(
       msg.sender,
-      _title,
+      _data,
       _tokenName, 
       _tokenSymbol, 
       _initialAmount
