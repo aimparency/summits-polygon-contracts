@@ -4,6 +4,7 @@ genPermutations(
   "Flow", 
   [
     ["explanation", "string calldata"],
+    ["weight", "uint16"], 
     ["d2d", "bytes4"]
   ], 
   ["address _from"],

@@ -16,20 +16,19 @@ struct AimData {
 
 struct FlowData {
 	string explanation;
-	bytes4 d2d; // 2x float16
+  uint16 weight;
+	bytes8 d2d; // 2x float32, distance 2d - relative to both involved aims radi
 }
 
 struct Flow {
 	bool exists;
-
-	uint16 weight;
-
   FlowData data; 
 }
 
 uint8 constant EDIT = 0x01; 
 uint8 constant NETWORK = 0x02; 
 uint8 constant MANAGE = 0x04; 
+uint8 constant OWN = 0xff; 
 
 uint128 constant MAX_TOKENS = 0xffffffffffffffffffffffffffffffff;
 
@@ -52,6 +51,7 @@ contract Aim is Ownable, ERC20 {
     require(msg.value == uint256(initialAmount) ** 2); 
 
     _mint(creator, initialAmount);
+    _transferOwnership(creator); 
 
     data.title = "aimparency"; 
     data.status = "wip"; 
@@ -116,7 +116,11 @@ contract Aim is Ownable, ERC20 {
   }
 
 	function getPermissions() public view returns (uint8) {
-    return permissions[msg.sender];
+    if(owner() == msg.sender) {
+      return OWN; 
+    } else {
+      return permissions[msg.sender];
+    }
   }
 
 	function getInvestment() public view returns (uint256) {
@@ -177,7 +181,6 @@ contract Aim is Ownable, ERC20 {
 
 	function createInflow(
 		address _from, 
-		uint16 _weight, 
 		FlowData calldata _data
 	) public onlyNetworkers {
 		Flow storage flow = inflows[_from];
@@ -185,8 +188,6 @@ contract Aim is Ownable, ERC20 {
 		require(!flow.exists, "flow already exists");
 
 		flow.exists = true;
-
-		flow.weight = _weight;
 
 		flow.data = _data;
 
@@ -504,6 +505,24 @@ contract Aim is Ownable, ERC20 {
 	  flowData.explanation = _explanation;
 	}
 
+	function updateFlowWeight(
+	  address _from,
+	  uint16 _weight
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.weight = _weight;
+	}
+
+	function updateFlowExplanationWeight(
+	  address _from,
+	  string calldata _explanation,
+	  uint16 _weight
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.explanation = _explanation;
+	  flowData.weight = _weight;
+	}
+
 	function updateFlowD2d(
 	  address _from,
 	  bytes4 _d2d
@@ -519,6 +538,28 @@ contract Aim is Ownable, ERC20 {
 	) public onlyEditors {
 	  FlowData storage flowData = inflows[_from].data;
 	  flowData.explanation = _explanation;
+	  flowData.d2d = _d2d;
+	}
+
+	function updateFlowWeightD2d(
+	  address _from,
+	  uint16 _weight,
+	  bytes4 _d2d
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.weight = _weight;
+	  flowData.d2d = _d2d;
+	}
+
+	function updateFlowExplanationWeightD2d(
+	  address _from,
+	  string calldata _explanation,
+	  uint16 _weight,
+	  bytes4 _d2d
+	) public onlyEditors {
+	  FlowData storage flowData = inflows[_from].data;
+	  flowData.explanation = _explanation;
+	  flowData.weight = _weight;
 	  flowData.d2d = _d2d;
 	}
 }	
