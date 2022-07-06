@@ -28,7 +28,7 @@ struct Flow {
 uint8 constant EDIT = 0x01; 
 uint8 constant NETWORK = 0x02; 
 uint8 constant MANAGE = 0x04; 
-uint8 constant OWN = 0xff; 
+uint8 constant TRANSFER = 0x80; 
 
 uint128 constant MAX_TOKENS = 0xffffffffffffffffffffffffffffffff;
 
@@ -42,9 +42,10 @@ contract Aim is Ownable, ERC20 {
 
 	AimData public data;
 
+  address [] members; 
   mapping (address => uint8) public permissions; 
 
-	address [] inflowAddresses; 
+	address [] contributors; 
 	mapping (address => Flow) public inflows;
 
   constructor(address creator, uint128 initialAmount) payable ERC20("", "") {
@@ -115,9 +116,17 @@ contract Aim is Ownable, ERC20 {
     _;
   }
 
+  modifier onlyManagers() {
+    require(
+      msg.sender == owner() || (permissions[msg.sender] & MANAGE > 0),
+      "sender has no permission to change flows"
+    );
+    _;
+  }
+
 	function getPermissions() public view returns (uint8) {
     if(owner() == msg.sender) {
-      return OWN; 
+      return 0xff; // all permissions
     } else {
       return permissions[msg.sender];
     }
@@ -191,7 +200,7 @@ contract Aim is Ownable, ERC20 {
 
 		flow.data = _data;
 
-		inflowAddresses.push(_from);
+		contributors.push(_from);
 
 		emit FlowCreation(_from, address(this));
 	}
@@ -205,8 +214,22 @@ contract Aim is Ownable, ERC20 {
 	  emit FlowRemoval(_from, address(this));
 	}
 
-  function getInflows() public view returns( address [] memory ) {
-    return inflowAddresses; 
+  function getContributors() public view returns( address [] memory ) {
+    return contributors; 
+  }
+
+  function setPermissions(address addr, uint8 _permissions) public {
+    uint8 requiredPermissions = MANAGE | (_permissions ^ permissions[addr]);  // ^supposed to be an xormeaning: any permission that changes *and* MANAGE permission. Managers 
+    require(
+      msg.sender == owner() || 
+      (permissions[msg.sender] & requiredPermissions) == requiredPermissions,
+      "sender has no permission to set these permissions"
+    );
+    permissions[addr] = _permissions; 
+  }
+
+  function getMembers() public view returns( address [] memory ) {
+    return members; 
   }
 
   // use ../codegen to autogen the following combinations of setters for aims and flows

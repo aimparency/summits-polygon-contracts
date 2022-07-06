@@ -47,6 +47,9 @@ describe("Summits", function () {
     summits.test()
   })
 
+  // TBD test permissions
+    // test creating permissions etc.
+
 });
 
 describe("Aim", function () {
