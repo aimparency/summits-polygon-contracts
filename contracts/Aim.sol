@@ -30,6 +30,8 @@ uint8 constant NETWORK = 0x02;
 uint8 constant MANAGE = 0x04; 
 uint8 constant TRANSFER = 0x80; 
 
+uint8 constant MANAGE_RESTRICTIONS = 0x03;
+
 uint128 constant MAX_TOKENS = 0xffffffffffffffffffffffffffffffff;
 
 contract Aim is Ownable, ERC20 {
@@ -222,7 +224,10 @@ contract Aim is Ownable, ERC20 {
     uint8 requiredPermissions = MANAGE | (_permissions ^ permissions[addr]);  // ^supposed to be an xormeaning: any permission that changes *and* MANAGE permission. Managers 
     require(
       msg.sender == owner() || 
-      (permissions[msg.sender] & requiredPermissions) == requiredPermissions,
+      (
+        (permissions[msg.sender] & requiredPermissions) == requiredPermissions && 
+        (_permissions & (0xff ^ MANAGE_RESTRICTIONS)) == 0
+      ),
       "sender has no permission to set these permissions"
     );
     permissions[addr] = _permissions; 
