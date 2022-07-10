@@ -223,14 +223,24 @@ contract Aim is Ownable, ERC20 {
   function setPermissions(address addr, uint8 _permissions) public {
     uint8 requiredPermissions = MANAGE | (_permissions ^ permissions[addr]);  // ^supposed to be an xormeaning: any permission that changes *and* MANAGE permission. Managers 
     require(
-      msg.sender == owner() || 
+      (msg.sender == owner()) || 
       (
-        (permissions[msg.sender] & requiredPermissions) == requiredPermissions && 
-        (_permissions & (0xff ^ MANAGE_RESTRICTIONS)) == 0
+        ((permissions[msg.sender] & requiredPermissions) == requiredPermissions) && 
+        ((_permissions & (0xff ^ MANAGE_RESTRICTIONS)) == 0)
       ),
       "sender has no permission to set these permissions"
     );
     permissions[addr] = _permissions; 
+  }
+
+  function setPermissionsForMultipleMembers(
+    address [] calldata addr, 
+    uint8 [] calldata _permissions
+  ) public {
+    require(addr.length == _permissions.length, "array lengths must match");
+    for(uint256 i = 0; i < addr.length; i++) {
+      setPermissions(addr[i], _permissions[i]);
+    }
   }
 
   function getMembers() public view returns( address [] memory ) {
