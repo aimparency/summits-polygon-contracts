@@ -3,7 +3,9 @@
 ## compile and deploy contracts
 Change directory into the repo root. 
 
-Copy `.env.example` to `.env`. You can leave the contents like they are for now.
+Copy `.env.example` to `.env`. 
+Set PRIVATE_KEY to your developer eth account's private key. 
+
 
 First compile the contracts with `yarn hardhat compile`. 
 

@@ -14,7 +14,7 @@ async function main() {
   // await hre.run('compile');
 
   // const initialTokens = ethers.BigNumber.from("2000000000")
-  const initialTokens = ethers.BigNumber.from("2000000") // goerli
+  const initialTokens = ethers.BigNumber.from("2000000") // keep it low for testing, change for mainnet release
   const initialPrice = initialTokens.pow(2)
   // We get the contract to deploy
   const Summits = await ethers.getContractFactory("Summits");
