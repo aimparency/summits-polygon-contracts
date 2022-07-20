@@ -46,9 +46,13 @@ contract Aim is Ownable, ERC20 {
 
   address [] members; 
   mapping (address => uint8) public permissions; 
+  mapping (address => bool) public memberExists; 
 
 	address [] contributors; 
-	mapping (address => Flow) public inflows;
+	mapping (address => Flow) public contributions;
+
+	address [] confirmedReceivers;
+	mapping (address => int8) public contributionConfirmations;
 
   constructor(address creator, uint128 initialAmount) payable ERC20("", "") {
     require(msg.value == uint256(initialAmount) ** 2); 
@@ -62,6 +66,8 @@ contract Aim is Ownable, ERC20 {
     data.effort = 60 * 60 * 24 * 356 * 30;
     data.color = 0x999999;
 
+    loopWeight = 0x8000; 
+
     tokenName = "aimparencent";
     tokenSymbol = "MPRNC";
   }
@@ -72,6 +78,7 @@ contract Aim is Ownable, ERC20 {
   function init(
     address creator, 
     AimData calldata _data, 
+    uint16 _loopWeight,
     string calldata _tokenName,
     string calldata _tokenSymbol,
     uint128 initialAmount
@@ -87,7 +94,7 @@ contract Aim is Ownable, ERC20 {
 		_transferOwnership(creator);
 
 		data = _data;
-
+    loopWeight = _loopWeight;
 		tokenName = _tokenName; 
 		tokenSymbol = _tokenSymbol;
 
@@ -194,14 +201,12 @@ contract Aim is Ownable, ERC20 {
 		address _from, 
 		FlowData calldata _data
 	) public onlyNetworkers {
-		Flow storage flow = inflows[_from];
+		Flow storage flow = contributions[_from];
 
 		require(!flow.exists, "flow already exists");
 
 		flow.exists = true;
-
 		flow.data = _data;
-
 		contributors.push(_from);
 
 		emit FlowCreation(_from, address(this));
@@ -210,7 +215,7 @@ contract Aim is Ownable, ERC20 {
 	function removeInflow(
 		address _from
 	) public onlyNetworkers {
-	  Flow storage flow = inflows[_from]; 
+	  Flow storage flow = contributions[_from]; 
 	  flow.exists = false;  
 
 	  emit FlowRemoval(_from, address(this));
@@ -231,20 +236,52 @@ contract Aim is Ownable, ERC20 {
       "sender has no permission to set these permissions"
     );
     permissions[addr] = _permissions; 
+    if(!memberExists[addr]) {
+      memberExists[addr] = true; 
+      members.push(addr); 
+    }
   }
 
   function setPermissionsForMultipleMembers(
-    address [] calldata addr, 
+    address [] calldata addrs, 
     uint8 [] calldata _permissions
   ) public {
-    require(addr.length == _permissions.length, "array lengths must match");
-    for(uint256 i = 0; i < addr.length; i++) {
-      setPermissions(addr[i], _permissions[i]);
+    require(addrs.length == _permissions.length, "array lengths must match");
+    for(uint256 i = 0; i < addrs.length; i++) {
+      setPermissions(addrs[i], _permissions[i]);
     }
   }
 
   function getMembers() public view returns( address [] memory ) {
     return members; 
+  }
+
+  // confirmations
+  function getConfirmedReceivers() public view returns( address [] memory ) {
+    uint256 len = confirmedReceivers.length; 
+    address [] memory results = new address[](len);
+    for(uint256 i = 0 ; i < len; i++) {
+      address addr = confirmedReceivers[i]; 
+      if(contributionConfirmations[addr] == 1) {
+        results[i] = addr; 
+      } 
+    }
+    return results;
+  }
+
+  function confirmContribution(address addr) public onlyNetworkers {
+    require(contributionConfirmations[addr] != 1, 'contribution already confirmed');
+    confirmedReceivers.push(addr); 
+    contributionConfirmations[addr] = 1;
+  }
+
+  function withdrawContribution(address addr) public onlyNetworkers {
+    require(contributionConfirmations[addr] == 1, 'contribution not confirmted');
+    contributionConfirmations[addr] = -1; 
+  }
+
+  function setLoopWeight(uint16 _loopWeight) public onlyNetworkers {
+    loopWeight = _loopWeight;
   }
 
   // use ../codegen to autogen the following combinations of setters for aims and flows
@@ -539,7 +576,7 @@ contract Aim is Ownable, ERC20 {
 	  address _from,
 	  string calldata _explanation
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
 	}
 
@@ -547,7 +584,7 @@ contract Aim is Ownable, ERC20 {
 	  address _from,
 	  uint16 _weight
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.weight = _weight;
 	}
 
@@ -556,7 +593,7 @@ contract Aim is Ownable, ERC20 {
 	  string calldata _explanation,
 	  uint16 _weight
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
 	  flowData.weight = _weight;
 	}
@@ -565,7 +602,7 @@ contract Aim is Ownable, ERC20 {
 	  address _from,
 	  bytes4 _d2d
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.d2d = _d2d;
 	}
 
@@ -574,7 +611,7 @@ contract Aim is Ownable, ERC20 {
 	  string calldata _explanation,
 	  bytes4 _d2d
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
 	  flowData.d2d = _d2d;
 	}
@@ -584,7 +621,7 @@ contract Aim is Ownable, ERC20 {
 	  uint16 _weight,
 	  bytes4 _d2d
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.weight = _weight;
 	  flowData.d2d = _d2d;
 	}
@@ -595,7 +632,7 @@ contract Aim is Ownable, ERC20 {
 	  uint16 _weight,
 	  bytes4 _d2d
 	) public onlyEditors {
-	  FlowData storage flowData = inflows[_from].data;
+	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
 	  flowData.weight = _weight;
 	  flowData.d2d = _d2d;

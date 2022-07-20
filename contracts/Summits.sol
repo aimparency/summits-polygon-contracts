@@ -23,6 +23,7 @@ contract Summits {
 
   function createAim(
     AimData calldata _data, 
+    uint16 _loopWeight, 
     string calldata _tokenName, 
     string calldata _tokenSymbol, 
     uint128 _initialAmount
@@ -32,6 +33,7 @@ contract Summits {
     aim.init{value: msg.value}(
       msg.sender,
       _data,
+      _loopWeight,
       _tokenName, 
       _tokenSymbol, 
       _initialAmount
