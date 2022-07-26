@@ -133,7 +133,7 @@ contract Aim is Ownable, ERC20 {
     _;
   }
 
-	function getPermissions() public view returns (uint8) {
+	function getCallersPermissions() public view returns (uint8) {
     if(owner() == msg.sender) {
       return 0xff; // all permissions
     } else {
@@ -250,6 +250,15 @@ contract Aim is Ownable, ERC20 {
     for(uint256 i = 0; i < addrs.length; i++) {
       setPermissions(addrs[i], _permissions[i]);
     }
+  }
+
+  function transferOwnership(address newOwner) public virtual override {
+    super.transferOwnership(newOwner);
+    if(!memberExists[msg.sender]) {
+      members.push(msg.sender);
+    }
+    memberExists[msg.sender] = true;
+    permissions[msg.sender] = 0x7f;
   }
 
   function getMembers() public view returns( address [] memory ) {
