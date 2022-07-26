@@ -21,7 +21,7 @@ struct FlowData {
 }
 
 struct Flow {
-	bool exists;
+	int8 exists;
   FlowData data; 
 }
 
@@ -44,13 +44,15 @@ contract Aim is Ownable, ERC20 {
 
 	AimData public data;
 
+  uint128 memberCount; 
   address [] members; 
+  mapping (address => int8) public memberExists; 
   mapping (address => uint8) public permissions; 
-  mapping (address => bool) public memberExists; 
 
 	address [] contributors; 
 	mapping (address => Flow) public contributions;
 
+	uint128 confirmedReceiversCount; 
 	address [] confirmedReceivers;
 	mapping (address => int8) public contributionConfirmations;
 
@@ -203,20 +205,23 @@ contract Aim is Ownable, ERC20 {
 	) public onlyNetworkers {
 		Flow storage flow = contributions[_from];
 
-		require(!flow.exists, "flow already exists");
+		require(flow.exists == 1, "flow already exists");
 
-		flow.exists = true;
+		if(contributions[_from].exists == 0) {
+      contributors.push(_from);
+    } 
+
 		flow.data = _data;
-		contributors.push(_from);
+		flow.exists = 1;
 
-		emit FlowCreation(_from, address(this));
+    emit FlowCreation(_from, address(this));
 	}
 
 	function removeInflow(
 		address _from
 	) public onlyNetworkers {
 	  Flow storage flow = contributions[_from]; 
-	  flow.exists = false;  
+	  flow.exists = 2; // tombstone
 
 	  emit FlowRemoval(_from, address(this));
 	}
@@ -235,11 +240,7 @@ contract Aim is Ownable, ERC20 {
       ),
       "sender has no permission to set these permissions"
     );
-    permissions[addr] = _permissions; 
-    if(!memberExists[addr]) {
-      memberExists[addr] = true; 
-      members.push(addr); 
-    }
+    _setPermissions(addr, _permissions);
   }
 
   function setPermissionsForMultipleMembers(
@@ -254,14 +255,35 @@ contract Aim is Ownable, ERC20 {
 
   function transferOwnership(address newOwner) public virtual override {
     super.transferOwnership(newOwner);
-    if(!memberExists[msg.sender]) {
-      members.push(msg.sender);
+    _setPermissions(msg.sender, 0x7f); 
+  }
+
+  function _setPermissions(address _memberAddr, uint8 _permissions) private {
+    if(_permissions == 0) { // setting 0 premissions removes member
+      if(memberExists[_memberAddr] == 1) {
+        memberExists[_memberAddr] = 2; // tombstone
+        memberCount--;
+      }
+    } else {
+      if(memberExists[memberAddr] == 0) {
+        members.push(memberAddr); 
+        memberCount++;
+      }
+      permissions[_memberAddr] = _permissions; 
+      memberExists[memberAddr] = 1; 
     }
-    memberExists[msg.sender] = true;
-    permissions[msg.sender] = 0x7f;
   }
 
   function getMembers() public view returns( address [] memory ) {
+    address [] memory results = new address[](memberCount);
+    uint256 ri = 0;
+    memberLength = members.len; 
+    for(uint128 i = 0; i < memberLength; i++) {
+      if(memberExists[members[i]] == 1) {
+        results[ri] = members[i];
+        ri++;
+      }
+    }
     return members; 
   }
 
@@ -280,13 +302,15 @@ contract Aim is Ownable, ERC20 {
 
   function confirmContribution(address addr) public onlyNetworkers {
     require(contributionConfirmations[addr] != 1, 'contribution already confirmed');
-    confirmedReceivers.push(addr); 
+    if(contributionConfirmations[addr] == 0) {
+      confirmedReceivers.push(addr); 
+    }
     contributionConfirmations[addr] = 1;
   }
 
-  function withdrawContribution(address addr) public onlyNetworkers {
+  function revokeContributionConfirmation(address addr) public onlyNetworkers {
     require(contributionConfirmations[addr] == 1, 'contribution not confirmted');
-    contributionConfirmations[addr] = -1; 
+    contributionConfirmations[addr] = 2; 
   }
 
   function setLoopWeight(uint16 _loopWeight) public onlyNetworkers {

@@ -167,3 +167,72 @@ describe("Aim owner transfer", function () {
     expect(await aim0.owner()).to.equal(newOwner) // but he is the new owner
   }) 
 })
+
+describe("Aim contribution confirmations", function () {
+  let signers: SignerWithAddress[]
+  let addresses: string[]
+  let aims: Contract[] = []
+  this.beforeEach(async function() {
+    signers = await ethers.getSigners()
+    addresses = await Promise.all(signers.map(s => s.getAddress()))
+    let initialAmount = BigInt(123456789)
+
+    let summitsFactory = await ethers.getContractFactory("Summits");
+    let summits = await summitsFactory.deploy(
+      initialAmount, 
+      {
+        value: initialAmount ** BigInt(2), 
+      }
+    ) as Summits; 
+    await summits.deployed();
+
+    for(let i = 0; i < 3; i++) {
+      let tx = await summits.createAim(
+        testAimData, 0x8000, 
+        'TestToken', 'TST', 
+        initialAmount, 
+        {
+          value: initialAmount * initialAmount
+        }
+      )
+      let rc = await tx.wait()
+      let creationEvent: any = rc.events!.find((e: any) => e.event === 'AimCreation') 
+      let aimContractAddress = creationEvent.args.aimAddress
+      let aimFactory = await ethers.getContractFactory("Aim");
+      aims.push(aimFactory.attach(aimContractAddress))
+    }
+  })
+
+
+  it("exclude aim before confirming, include after confirming, and exclude after removing", async function () {
+    expect(await aims[0].getConfirmedReceivers()).to.have.lengthOf(0, "unexpected confirmed receivers")
+
+    let tx = await aims[0].confirmContribution(aims[1].address)
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[1].address], "after confirming 1") 
+
+    tx = await aims[0].confirmContribution(aims[2].address)
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedReceivers())
+      .to.have.members([aims[1].address, aims[2].address], "after confirming 2")
+
+    tx = await aims[0].revokeContributionConfirmation(aims[1].address)
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[2].address], "after revoking 1") 
+
+    tx = await aims[0].confirmContribution(aims[1].address)
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[1].address, aims[2].address], "after confirming 1 back again")
+
+    tx = await aims[0].revokeContributionConfirmation(aims[1].address)
+    let tx2 = await aims[0].revokeContributionConfirmation(aims[2].address)
+    await Promise.all([tx.wait(), tx2.wait()])
+
+    expect(await aims[0].getConfirmedReceivers()).to.equal([], "after revoking all")
+  }) 
+})
+
