@@ -44,7 +44,6 @@ contract Aim is Ownable, ERC20 {
 
 	AimData public data;
 
-  uint128 memberCount; 
   address [] members; 
   mapping (address => int8) public memberExists; 
   mapping (address => uint8) public permissions; 
@@ -52,7 +51,7 @@ contract Aim is Ownable, ERC20 {
 	address [] contributors; 
 	mapping (address => Flow) public contributions;
 
-	uint128 confirmedReceiversCount; 
+  uint256 confirmedReceiversCount; 
 	address [] confirmedReceivers;
 	mapping (address => int8) public contributionConfirmations;
 
@@ -130,7 +129,7 @@ contract Aim is Ownable, ERC20 {
   modifier onlyManagers() {
     require(
       msg.sender == owner() || (permissions[msg.sender] & MANAGE > 0),
-      "sender has no permission to change flows"
+      "sender has no permission to edit members"
     );
     _;
   }
@@ -205,7 +204,7 @@ contract Aim is Ownable, ERC20 {
 	) public onlyNetworkers {
 		Flow storage flow = contributions[_from];
 
-		require(flow.exists == 1, "flow already exists");
+		require(flow.exists != 1, "flow already exists");
 
 		if(contributions[_from].exists == 0) {
       contributors.push(_from);
@@ -259,57 +258,65 @@ contract Aim is Ownable, ERC20 {
   }
 
   function _setPermissions(address _memberAddr, uint8 _permissions) private {
-    if(_permissions == 0) { // setting 0 premissions removes member
-      if(memberExists[_memberAddr] == 1) {
-        memberExists[_memberAddr] = 2; // tombstone
-        memberCount--;
-      }
-    } else {
-      if(memberExists[memberAddr] == 0) {
-        members.push(memberAddr); 
-        memberCount++;
-      }
-      permissions[_memberAddr] = _permissions; 
-      memberExists[memberAddr] = 1; 
+    if(memberExists[_memberAddr] == 0) {
+      members.push(_memberAddr); 
     }
+    permissions[_memberAddr] = _permissions; 
   }
 
   function getMembers() public view returns( address [] memory ) {
-    address [] memory results = new address[](memberCount);
-    uint256 ri = 0;
-    memberLength = members.len; 
-    for(uint128 i = 0; i < memberLength; i++) {
-      if(memberExists[members[i]] == 1) {
-        results[ri] = members[i];
-        ri++;
-      }
-    }
     return members; 
   }
 
   // confirmations
-  function getConfirmedReceivers() public view returns( address [] memory ) {
+  function getConfirmedContributions() public view returns( address [] memory ) {
+    address [] memory results = new address[](confirmedReceiversCount);
     uint256 len = confirmedReceivers.length; 
-    address [] memory results = new address[](len);
+    uint256 ir = 0;
     for(uint256 i = 0 ; i < len; i++) {
       address addr = confirmedReceivers[i]; 
       if(contributionConfirmations[addr] == 1) {
-        results[i] = addr; 
-      } 
+        results[ir] = addr; 
+        ir++; 
+      }
     }
     return results;
   }
 
+  function setContributionConfirmations(
+    address [] calldata addrs, 
+    bool [] calldata confirmeds
+  ) public onlyNetworkers {
+    uint256 len = addrs.length;
+    for(uint256 i = 0; i < len; i++) {
+      if(confirmeds[i]) {
+        _confirmContribution(addrs[i]);
+      } else {
+        _revokeContributionConfirmation(addrs[i]);
+      }
+    }
+  }
+
   function confirmContribution(address addr) public onlyNetworkers {
+    _confirmContribution(addr);
+  }
+
+  function revokeContributionConfirmation(address addr) public onlyNetworkers {
+    _revokeContributionConfirmation(addr);
+  }
+
+  function _confirmContribution(address addr) private {
     require(contributionConfirmations[addr] != 1, 'contribution already confirmed');
+    confirmedReceiversCount++; 
     if(contributionConfirmations[addr] == 0) {
       confirmedReceivers.push(addr); 
     }
     contributionConfirmations[addr] = 1;
   }
 
-  function revokeContributionConfirmation(address addr) public onlyNetworkers {
+  function _revokeContributionConfirmation(address addr) private {
     require(contributionConfirmations[addr] == 1, 'contribution not confirmted');
+    confirmedReceiversCount--; 
     contributionConfirmations[addr] = 2; 
   }
 

@@ -169,12 +169,8 @@ describe("Aim owner transfer", function () {
 })
 
 describe("Aim contribution confirmations", function () {
-  let signers: SignerWithAddress[]
-  let addresses: string[]
   let aims: Contract[] = []
   this.beforeEach(async function() {
-    signers = await ethers.getSigners()
-    addresses = await Promise.all(signers.map(s => s.getAddress()))
     let initialAmount = BigInt(123456789)
 
     let summitsFactory = await ethers.getContractFactory("Summits");
@@ -186,7 +182,7 @@ describe("Aim contribution confirmations", function () {
     ) as Summits; 
     await summits.deployed();
 
-    for(let i = 0; i < 3; i++) {
+    for(let i = 0; i < 9; i++) {
       let tx = await summits.createAim(
         testAimData, 0x8000, 
         'TestToken', 'TST', 
@@ -205,34 +201,68 @@ describe("Aim contribution confirmations", function () {
 
 
   it("exclude aim before confirming, include after confirming, and exclude after removing", async function () {
-    expect(await aims[0].getConfirmedReceivers()).to.have.lengthOf(0, "unexpected confirmed receivers")
+    expect(await aims[0].getConfirmedContributions()).to.have.lengthOf(0, "unexpected confirmed receivers")
 
     let tx = await aims[0].confirmContribution(aims[1].address)
     await tx.wait()
 
-    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[1].address], "after confirming 1") 
+    expect(await aims[0].getConfirmedContributions()).to.have.members([aims[1].address], "after confirming 1") 
 
     tx = await aims[0].confirmContribution(aims[2].address)
     await tx.wait()
 
-    expect(await aims[0].getConfirmedReceivers())
+    expect(await aims[0].getConfirmedContributions())
       .to.have.members([aims[1].address, aims[2].address], "after confirming 2")
 
     tx = await aims[0].revokeContributionConfirmation(aims[1].address)
     await tx.wait()
 
-    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[2].address], "after revoking 1") 
+    expect(await aims[0].getConfirmedContributions()).to.have.members([aims[2].address], "after revoking 1") 
 
     tx = await aims[0].confirmContribution(aims[1].address)
     await tx.wait()
 
-    expect(await aims[0].getConfirmedReceivers()).to.have.members([aims[1].address, aims[2].address], "after confirming 1 back again")
+    expect(await aims[0].getConfirmedContributions()).to.have.members([aims[1].address, aims[2].address], "after confirming 1 back again")
 
     tx = await aims[0].revokeContributionConfirmation(aims[1].address)
     let tx2 = await aims[0].revokeContributionConfirmation(aims[2].address)
     await Promise.all([tx.wait(), tx2.wait()])
 
-    expect(await aims[0].getConfirmedReceivers()).to.equal([], "after revoking all")
+    expect(await aims[0].getConfirmedContributions()).to.have.lengthOf(0, "after revoking all")
   }) 
+
+  it("should set multiple confirmations and revoke if > 0 are not differing", async function () {
+    let addrs = aims.map(a => a.address)
+
+    expect(aims[0].setContributionConfirmations(
+      addrs.slice(0, 4),
+      [false, true, false, true]
+    )).to.be.revertedWith('contribution not confirmed')
+
+    let tx = await aims[0].setContributionConfirmations(
+      addrs.slice(1, 4),
+      [true, true, true]
+    )
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedContributions())
+      .to.have.members([addrs[1], addrs[2], addrs[3]], "after confirming first 3")
+
+    expect(aims[0].setContributionConfirmations(
+      addrs.slice(0, 4),
+      [true, true, false, true]
+    )).to.be.revertedWith('contribution already confirmed');
+
+    tx = await aims[0].setContributionConfirmations(
+      [addrs[2], addrs[4]],
+      [false, true]
+    )
+    await tx.wait()
+
+    expect(await aims[0].getConfirmedContributions()).to.have.members([addrs[1], addrs[3], addrs[4]]) 
+  })
 })
 
+//TBD: creating flows etc 
+
+// TBD investing. E.g. invest from various accounts. Withdraw everything, make sure sums are equal. nothing lost. 
