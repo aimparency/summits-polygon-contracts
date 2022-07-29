@@ -1,11 +1,11 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 
 import { Summits } from '../typechain-types/contracts/Summits'
 
-let initialAmount = BigInt(123456789)
+let initialAmount = BigNumber.from(123456789)
 let testAimData = {
   title: "Test", 
   description: "", 
@@ -23,7 +23,7 @@ describe("Summits", function () {
     summits = await summitsFactory.deploy(
       initialAmount, 
       {
-        value: initialAmount ** BigInt(2) 
+        value: initialAmount.pow(2) 
       }
     ) as Summits; 
     await summits.deployed();
@@ -41,13 +41,13 @@ describe("Summits", function () {
   })
 
   it("should be able to create a new aim with correct value", async function () {
-    let ia = BigInt(9320)
+    let ia = BigNumber.from(9320)
     let tx = await summits.createAim(
       testAimData, 0x8000, 
       'TestToken', 'TST', 
       ia, 
       {
-        value: ia * ia
+        value: ia.pow(2) 
       }
     )
 
@@ -60,12 +60,12 @@ describe("Summits", function () {
   it("should reject aim creations with value <> initial investment ** 2", function() {
     let badCreations = [
       {
-        initialAmount: BigInt(1000), 
-        value: BigInt(1000 * 1000 - 1), 
+        initialAmount: BigNumber.from(1000), 
+        value: BigNumber.from(1000 * 1000 - 1), 
       }, 
       {
-        initialAmount: BigInt(2000), 
-        value: BigInt(2000 * 2000 + 1), 
+        initialAmount: BigNumber.from(2000), 
+        value: BigNumber.from(2000 * 2000 + 1), 
       }
     ]
     for(let badCreation of badCreations) {
@@ -92,13 +92,13 @@ describe("Aim owner transfer", function () {
   this.beforeEach(async function() {
     signers = await ethers.getSigners()
     addresses = await Promise.all(signers.map(s => s.getAddress()))
-    let initialAmount = BigInt(123456789)
+    let initialAmount = BigNumber.from(123456789)
 
     let summitsFactory = await ethers.getContractFactory("Summits");
     let summits = await summitsFactory.deploy(
       initialAmount, 
       {
-        value: initialAmount ** BigInt(2), 
+        value: initialAmount.pow(2) 
       }
     ) as Summits; 
     await summits.deployed();
@@ -108,7 +108,7 @@ describe("Aim owner transfer", function () {
       'TestToken', 'TST', 
       initialAmount, 
       {
-        value: initialAmount * initialAmount
+        value: initialAmount.pow(2)
       }
     )
     let rc = await tx.wait()
@@ -171,13 +171,13 @@ describe("Aim owner transfer", function () {
 describe("Aim contribution confirmations", function () {
   let aims: Contract[] = []
   this.beforeEach(async function() {
-    let initialAmount = BigInt(123456789)
+    let initialAmount = BigNumber.from(123456789)
 
     let summitsFactory = await ethers.getContractFactory("Summits");
     let summits = await summitsFactory.deploy(
       initialAmount, 
       {
-        value: initialAmount ** BigInt(2), 
+        value: initialAmount.pow(2)
       }
     ) as Summits; 
     await summits.deployed();
@@ -188,7 +188,7 @@ describe("Aim contribution confirmations", function () {
         'TestToken', 'TST', 
         initialAmount, 
         {
-          value: initialAmount * initialAmount
+          value: initialAmount.pow(2) 
         }
       )
       let rc = await tx.wait()
@@ -265,4 +265,116 @@ describe("Aim contribution confirmations", function () {
 
 //TBD: creating flows etc 
 
-// TBD investing. E.g. invest from various accounts. Withdraw everything, make sure sums are equal. nothing lost. 
+describe("Investing", function () {
+  // E.g. invest from various accounts. Withdraw everything, make sure sums are equal. nothing lost. 
+  let signers: SignerWithAddress[]
+  let summits: Contract
+
+  this.beforeEach(async function() {
+    signers = await ethers.getSigners()
+
+    let initialInves = BigNumber.from(3423042304)
+    let summitsFactory = await ethers.getContractFactory("Summits");
+    summits = await summitsFactory.deploy(
+      initialInves, 
+      {
+        value: initialInves.pow(2) 
+      }
+    ) as Summits; 
+    await summits.deployed();
+    
+
+  })
+
+  it("should allow buying and selling", async function () {
+    let initialInvest = BigNumber.from(123456789)
+
+    let initialBalance = await signers[0].getBalance()
+
+    let tx = await summits.createAim(
+      testAimData, 0x8000, 
+      'TestToken', 'TST', 
+      initialInvest, 
+      {
+        value: initialInvest.pow(2) 
+      }
+    )
+    let rc = await tx.wait()
+    let gasExpenses = rc.gasUsed.mul(rc.effectiveGasPrice)
+    let creationEvent: any = rc.events!.find((e: any) => e.event === 'AimCreation') 
+    let aimAddr = creationEvent.args.aimAddress
+
+    let aimFactory = await ethers.getContractFactory("Aim", signers[0]);
+    let aim = aimFactory.attach(aimAddr)
+
+    let balance = initialBalance.sub(initialInvest.pow(2))
+    let tokenBalance = await aim.getInvestment()
+    expect(tokenBalance, "initial token balance").to.equal(initialInvest)
+
+    let investments = [10000, 20000, 15000].map(n => BigNumber.from(n)) 
+
+    for(let invest of investments) {
+      let totalSupply = await aim.totalSupply()
+      let price = totalSupply.add(invest).pow(2)  - totalSupply.pow(2) 
+      tx = await aim.buy(invest, {
+        value: price
+      })
+      rc = await tx.wait()
+      gasExpenses = gasExpenses.add(rc.effectiveGasPrice.mul(rc.gasUsed))
+
+      tokenBalance = tokenBalance.add(invest)
+      expect(await aim.getInvestment(), "token balance after invest").to.equal(tokenBalance)
+
+      balance = balance.sub(price)
+      expect(await signers[0].getBalance(), "balance after invest").to.equal(balance.sub(gasExpenses))
+    }
+
+    let totalInvest = initialInvest
+    investments.forEach(a => totalInvest = totalInvest.add(a))
+
+    expect(await aim.getInvestment(), "invest after invests")
+      .to.equal(totalInvest, "total token balance")
+    expect(await signers[0].getBalance(), "balance after invests")
+      .to.equal(initialBalance.sub(totalInvest.pow(2)).sub(gasExpenses))
+
+    let devestments = [1000, 5000]
+    for(let devest of devestments) {
+      let totalSupply = await aim.totalSupply()
+      let price = totalSupply.pow(2) - totalSupply.sub(devest).pow(2) 
+      tx = await aim.sell(devest, price)
+      rc = await tx.wait()
+      gasExpenses = gasExpenses.add(rc.effectiveGasPrice.mul(rc.gasUsed))
+
+      tokenBalance = tokenBalance.sub(devest)
+      expect(await aim.getInvestment(), "token balance after divest").to.equal(tokenBalance)
+
+      balance = balance.add(price)
+      expect(await signers[0].getBalance(), "balance after divest").to.equal(balance.sub(gasExpenses))
+    }
+
+    devestments.forEach(a => totalInvest = totalInvest.sub(a))
+    expect(await signers[0].getBalance(), "total divest").
+      to.equal(initialBalance.sub(totalInvest.pow(2)).sub(gasExpenses))
+
+    // sell remaining tokens
+    let totalSupply = await aim.totalSupply()
+    let price = totalSupply.pow(2)
+    tx = await aim.sell(totalSupply, price)
+    await tx.wait()
+    rc = await tx.wait()
+    gasExpenses = gasExpenses.add(rc.effectiveGasPrice.mul(rc.gasUsed))
+
+    expect(await aim.getInvestment(), "everything sold").to.equal(0)
+    expect(await aim.totalSupply(), "total supply == 0").to.equal(0)
+
+    expect(await signers[0].getBalance(), "got everything back (except gas costs of course)")
+      .to.equal(initialBalance.sub(gasExpenses))
+  })
+
+  // it should fail when not enough funds are send or 
+  // when min payout is not reached
+  // should not be able to sell more than you have
+
+  it("should work with multiple investors", async function () {
+  }) 
+})

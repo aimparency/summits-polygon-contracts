@@ -149,26 +149,20 @@ contract Aim is Ownable, ERC20 {
 	function buy (
 	  uint128 amount
 	) public payable {
-	  console.log("buying", amount, tokenSymbol); 
 	  uint256 targetSupply = totalSupply() + amount; 
 	  require(targetSupply < MAX_TOKENS, "");
 	  /* a bit more than half of all possible eth must be invested in this bonding curve 
 	    for the target amount exceeding MAX_TOKENS. 
 	    By this limit the following power calculations are safe */
 
-	  console.log("targetSupply", targetSupply); 
-
 	  uint256 currentAccumulatedPrice = totalSupply() ** 2; 
 		uint256 targetAccumulatedPrice = targetSupply ** 2;
 
 		uint256 price = targetAccumulatedPrice - currentAccumulatedPrice; 
 
-	  console.log("targetSupply", price); 
-
 		require(price <= msg.value, "insufficient funds sent"); 
 
 		if(msg.value == price || payable(msg.sender).send(msg.value - price)) { // diese Zeile könnte Probleme machen
-      console.log("minting", amount); 
       _mint(msg.sender, amount);
     } else {
       revert("funds sent exceeds price and sender not payable");
