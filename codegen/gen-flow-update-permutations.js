@@ -5,7 +5,7 @@ genPermutations(
   [
     ["explanation", "string calldata"],
     ["weight", "uint16"], 
-    ["d2d", "bytes4"]
+    ["d2d", "bytes8"]
   ], 
   ["address _from"],
   ["FlowData storage flowData = inflows[_from].data"], 

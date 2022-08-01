@@ -634,7 +634,7 @@ contract Aim is Ownable, ERC20 {
 
 	function updateFlowD2d(
 	  address _from,
-	  bytes4 _d2d
+	  bytes8 _d2d
 	) public onlyEditors {
 	  FlowData storage flowData = contributions[_from].data;
 	  flowData.d2d = _d2d;
@@ -643,7 +643,7 @@ contract Aim is Ownable, ERC20 {
 	function updateFlowExplanationD2d(
 	  address _from,
 	  string calldata _explanation,
-	  bytes4 _d2d
+	  bytes8 _d2d
 	) public onlyEditors {
 	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
@@ -653,7 +653,7 @@ contract Aim is Ownable, ERC20 {
 	function updateFlowWeightD2d(
 	  address _from,
 	  uint16 _weight,
-	  bytes4 _d2d
+	  bytes8 _d2d
 	) public onlyEditors {
 	  FlowData storage flowData = contributions[_from].data;
 	  flowData.weight = _weight;
@@ -664,7 +664,7 @@ contract Aim is Ownable, ERC20 {
 	  address _from,
 	  string calldata _explanation,
 	  uint16 _weight,
-	  bytes4 _d2d
+	  bytes8 _d2d
 	) public onlyEditors {
 	  FlowData storage flowData = contributions[_from].data;
 	  flowData.explanation = _explanation;
