@@ -254,6 +254,7 @@ contract Aim is Ownable, ERC20 {
   function _setPermissions(address _memberAddr, uint8 _permissions) private {
     if(memberExists[_memberAddr] == 0) {
       members.push(_memberAddr); 
+      memberExists[_memberAddr] = 1;
     }
     permissions[_memberAddr] = _permissions; 
   }
