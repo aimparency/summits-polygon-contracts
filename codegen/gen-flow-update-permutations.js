@@ -9,6 +9,7 @@ genPermutations(
   ], 
   ["address _from"],
   ["FlowData storage flowData = inflows[_from].data"], 
-  "flowData"
+  "flowData", 
+  "onlyNetworkers"
 )
 

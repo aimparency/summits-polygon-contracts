@@ -1,5 +1,5 @@
 
-module.exports = function(prefix, vars, additionalParams, additionalLines, objName) {
+module.exports = function(prefix, vars, additionalParams, additionalLines, objName, checks) {
   let combinations = [[]]
   let capitalizedVars = []
   for(let i = 0; i < vars.length; i++) {
@@ -13,7 +13,7 @@ module.exports = function(prefix, vars, additionalParams, additionalLines, objNa
     console.log(`
 	function update${prefix}${combination.map(j => capitalizedVars[j]).join("")}(
 	  ${additionalParams.concat(combination.map(j => vars[j][1] + " _" + vars[j][0])).join(",\n\t  ")}
-	) public onlyEditors {
+	) public ${checks} {
 	  ${additionalLines.concat(combination.map(j => `${objName}.${vars[j][0]} = _${vars[j][0]}`)).join(";\n\t  ")};
 	}`)
   }

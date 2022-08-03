@@ -11,5 +11,6 @@ genPermutations(
   ], 
   [],
   [], 
-  "data"
+  "data", 
+  "onlyEditors"
 )
