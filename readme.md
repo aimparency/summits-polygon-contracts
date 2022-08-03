@@ -17,6 +17,9 @@ If you want to deploy on goerli or mumbai, open `.env` and fill in the URL and P
 
 In case you want to deploy on a still different network, have a look into `./hardhat.config.ts`. 
 
+## contract abis
+both files `artifacts/contracts/[Aim.sol|Summits.sol]/[Aim.json|Summits.json]` get copied to `./release` and added for new release versions of the contracts. 
+
 ## hardhat commands
 
 ```shell
